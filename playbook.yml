@@ -90,6 +90,14 @@
         group: pwslab
         mode: 0775
 
+    - name: display post install message
+      debug:
+        msg:
+          - 'Please do the following for Ghost Configuration:'
+          - '- cd /var/www/ghost'
+          - '- su pwslab'
+          - '- ghost install'
+          - '- Enter the required values'
     # - name: Processing Ghost Install
     #   command: ghost install
     #   become: true
