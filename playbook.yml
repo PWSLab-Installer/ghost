@@ -1,0 +1,98 @@
+- hosts: localhost
+  connection: local
+
+  tasks:
+      
+    - name: Install Role NodeJS
+      local_action: command ansible-galaxy install -f geerlingguy.nodejs 
+
+    - name: Install Role Nginx
+      local_action: command ansible-galaxy install -f geerlingguy.nginx
+
+    - name: Install Role Mysql
+      local_action: command ansible-galaxy install -f geerlingguy.mysql
+
+    - name: Check if NodeJS is already installed
+      stat: path=/usr/bin/node
+      register: node_exists
+
+    - name: Check if NGINX is already installed
+      stat: path=/usr/sbin/nginx
+      register: nginx_exists
+
+    - name: Check if MYSQL is already installed
+      stat: path=/usr/bin/mysql
+      register: mysql_exists
+
+    - name: Applying role NodeJS
+      command: mv ~/.ansible/roles/geerlingguy.nodejs ~/.ansible/roles/pwslab.nodejs
+      when: not node_exists.stat.exists
+      ignore_errors: yes
+
+    - name: Applying role Nginx
+      command: mv ~/.ansible/roles/geerlingguy.nginx ~/.ansible/roles/pwslab.nginx
+      when: not nginx_exists.stat.exists
+      ignore_errors: yes
+
+    - name: Applying role MYSQL
+      command: mv ~/.ansible/roles/geerlingguy.mysql ~/.ansible/roles/pwslab.mysql
+      when: not mysql_exists.stat.exists
+      ignore_errors: yes
+
+
+    - name: Installing NodeJS
+      include_role:
+        name: pwslab.nodejs
+      when: not node_exists.stat.exists
+    
+    - name: Installing Nginx
+      include_role:
+          name: pwslab.nginx
+      when: not nginx_exists.stat.exists
+
+    - name: Installing MYSQL
+      include_role:
+          name: pwslab.mysql
+      when: not mysql_exists.stat.exists
+
+########################################################################
+
+    - name: Checking PWSLab Group
+      group:
+        name: pwslab
+        state: present
+
+    - name: Allow 'PWSLab' group to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%pwslab'
+        line: '%pwslab ALL=(ALL) NOPASSWD: ALL'
+        validate: visudo -cf %s
+
+    - name: Add the user 'pwslab' with a bash shell, appending the group 'pwslab' to the user's groups
+      user:
+        name: pwslab
+        shell: /bin/bash
+        groups: pwslab
+        append: yes
+
+    - name: Install "Ghost" node.js package globally.
+      npm:
+        name: ghost-cli
+        global: yes
+
+    - name: Create Ghost directory
+      file:
+        path: /var/www/ghost
+        state: directory
+        owner: pwslab
+        group: pwslab
+        mode: 0775
+
+    # - name: Processing Ghost Install
+    #   command: ghost install
+    #   become: true
+    #   become_user: pwslab
+    #   args:
+    #     chdir: /var/www/ghost
